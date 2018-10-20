@@ -3,11 +3,6 @@
 // Composerでインストールしたライブラリを一括読み込み
 require_once __DIR__ . '/vendor/autoload.php';
 
- // リッチコンテンツがタップされた時
-  if(substr($event->getText(), 0, 4) == 'cmd_') {
-  goto a;
-  }
-
 // アクセストークンを使いCurlHTTPClientをインスタンス化
 $httpClient = new \LINE\LINEBot\HTTPClient\CurlHTTPClient(getenv('CHANNEL_ACCESS_TOKEN'));
 // CurlHTTPClientとシークレットを使いLINEBotをインスタンス化
