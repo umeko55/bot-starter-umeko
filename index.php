@@ -2,8 +2,11 @@
 
 // Composerでインストールしたライブラリを一括読み込み
 require_once __DIR__ . '/vendor/autoload.php';
-// テーブル名を定義
-define('TABLE_NAME_STONES', 'stones');
+
+ // リッチコンテンツがタップされた時
+  if(substr($event->getText(), 0, 4) == 'cmd_') {
+  goto a;
+  }
 
 // アクセストークンを使いCurlHTTPClientをインスタンス化
 $httpClient = new \LINE\LINEBot\HTTPClient\CurlHTTPClient(getenv('CHANNEL_ACCESS_TOKEN'));
@@ -32,6 +35,7 @@ foreach ($events as $event) {
     error_log('Non message event has come');
     continue;
   }
+
   // TextMessageクラスのインスタンスの場合
   if ($event instanceof \LINE\LINEBot\Event\MessageEvent\TextMessage) {
     // 入力されたテキストを取得
@@ -203,25 +207,6 @@ function replyStickerMessage($bot, $replyToken, $packageId, $stickerId) {
   }
 }
 
-// 動画を返信。引数はLINEBot、返信先、動画URL、サムネイルURL
-function replyVideoMessage($bot, $replyToken, $originalContentUrl, $previewImageUrl) {
-  // VideoMessageBuilderの引数は動画URL、サムネイルURL
-  $response = $bot->replyMessage($replyToken, new \LINE\LINEBot\MessageBuilder\VideoMessageBuilder($originalContentUrl, $previewImageUrl));
-  if (!$response->isSucceeded()) {
-    error_log('Failed! '. $response->getHTTPStatus . ' ' . $response->getRawBody());
-  }
-}
-
-// オーディオファイルを返信。引数はLINEBot、返信先、
-// ファイルのURL、ファイルの再生時間
-function replyAudioMessage($bot, $replyToken, $originalContentUrl, $audioLength) {
-  // AudioMessageBuilderの引数はファイルのURL、ファイルの再生時間
-  $response = $bot->replyMessage($replyToken, new \LINE\LINEBot\MessageBuilder\AudioMessageBuilder($originalContentUrl, $audioLength));
-  if (!$response->isSucceeded()) {
-    error_log('Failed! '. $response->getHTTPStatus . ' ' . $response->getRawBody());
-  }
-}
-
 // 複数のメッセージをまとめて返信。引数はLINEBot、
 // 返信先、メッセージ(可変長引数)
 function replyMultiMessage($bot, $replyToken, ...$msgs) {
@@ -291,9 +276,32 @@ function replyCarouselTemplate($bot, $replyToken, $alternativeText, $columnArray
     error_log('Failed!'. $response->getHTTPStatus . ' ' . $response->getRawBody());
   }
 }
+goto b;
 
- // リッチコンテンツがタップされた時
-  if(substr($event->getText(), 0, 4) == 'cmd_') {
+a:
+// テーブル名を定義
+define('TABLE_NAME_STONES', 'stones');
+
+// アクセストークンを使いCurlHTTPClientをインスタンス化
+$httpClient = new \LINE\LINEBot\HTTPClient\CurlHTTPClient(getenv('CHANNEL_ACCESS_TOKEN'));
+// CurlHTTPClientとシークレットを使いLINEBotをインスタンス化
+$bot = new \LINE\LINEBot($httpClient, ['channelSecret' => getenv('CHANNEL_SECRET')]);
+// LINE Messaging APIがリクエストに付与した署名を取得
+$signature = $_SERVER['HTTP_' . \LINE\LINEBot\Constant\HTTPHeader::LINE_SIGNATURE];
+
+// 署名が正当かチェック。正当であればリクエストをパースし配列へ
+// 不正であれば例外の内容を出力
+try {
+  $events = $bot->parseEventRequest(file_get_contents('php://input'), $signature);
+} catch(\LINE\LINEBot\Exception\InvalidSignatureException $e) {
+  error_log('parseEventRequest failed. InvalidSignatureException => '.var_export($e, true));
+} catch(\LINE\LINEBot\Exception\UnknownEventTypeException $e) {
+  error_log('parseEventRequest failed. UnknownEventTypeException => '.var_export($e, true));
+} catch(\LINE\LINEBot\Exception\UnknownMessageTypeException $e) {
+  error_log('parseEventRequest failed. UnknownMessageTypeException => '.var_export($e, true));
+} catch(\LINE\LINEBot\Exception\InvalidEventRequestException $e) {
+  error_log('parseEventRequest failed. InvalidEventRequestException => '.var_export($e, true));
+}
 
 // 配列に格納された各イベントをループで処理
 foreach ($events as $event) {
@@ -308,7 +316,8 @@ foreach ($events as $event) {
     continue;
   }
 
- 
+  // リッチコンテンツがタップされた時
+  if(substr($event->getText(), 0, 4) == 'cmd_') {
     // 盤面の確認
     if(substr($event->getText(), 4) == 'check_board') {
       if(getStonesByUserId($event->getUserId()) != PDO::PARAM_NULL) {
@@ -835,5 +844,6 @@ class dbConnection {
     return self::$db;
   }
 }
+b:
 
 ?>
