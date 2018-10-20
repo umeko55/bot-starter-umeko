@@ -1,5 +1,8 @@
 <?php
 
+ if(substr($event->getText(), 0, 3) == 'オセロ') {
+ goto a;
+ }
 // Composerでインストールしたライブラリを一括読み込み
 require_once __DIR__ . '/vendor/autoload.php';
 
@@ -23,6 +26,7 @@ try {
 } catch(\LINE\LINEBot\Exception\InvalidEventRequestException $e) {
   error_log('parseEventRequest failed. InvalidEventRequestException => '.var_export($e, true));
 }
+
 // 配列に格納された各イベントをループで処理
 foreach ($events as $event) {
   // MessageEventクラスのインスタンスでなければ処理をスキップ
@@ -30,7 +34,6 @@ foreach ($events as $event) {
     error_log('Non message event has come');
     continue;
   }
-
   // TextMessageクラスのインスタンスの場合
   if ($event instanceof \LINE\LINEBot\Event\MessageEvent\TextMessage) {
     // 入力されたテキストを取得
@@ -202,6 +205,25 @@ function replyStickerMessage($bot, $replyToken, $packageId, $stickerId) {
   }
 }
 
+// 動画を返信。引数はLINEBot、返信先、動画URL、サムネイルURL
+function replyVideoMessage($bot, $replyToken, $originalContentUrl, $previewImageUrl) {
+  // VideoMessageBuilderの引数は動画URL、サムネイルURL
+  $response = $bot->replyMessage($replyToken, new \LINE\LINEBot\MessageBuilder\VideoMessageBuilder($originalContentUrl, $previewImageUrl));
+  if (!$response->isSucceeded()) {
+    error_log('Failed! '. $response->getHTTPStatus . ' ' . $response->getRawBody());
+  }
+}
+
+// オーディオファイルを返信。引数はLINEBot、返信先、
+// ファイルのURL、ファイルの再生時間
+function replyAudioMessage($bot, $replyToken, $originalContentUrl, $audioLength) {
+  // AudioMessageBuilderの引数はファイルのURL、ファイルの再生時間
+  $response = $bot->replyMessage($replyToken, new \LINE\LINEBot\MessageBuilder\AudioMessageBuilder($originalContentUrl, $audioLength));
+  if (!$response->isSucceeded()) {
+    error_log('Failed! '. $response->getHTTPStatus . ' ' . $response->getRawBody());
+  }
+}
+
 // 複数のメッセージをまとめて返信。引数はLINEBot、
 // 返信先、メッセージ(可変長引数)
 function replyMultiMessage($bot, $replyToken, ...$msgs) {
@@ -271,9 +293,12 @@ function replyCarouselTemplate($bot, $replyToken, $alternativeText, $columnArray
     error_log('Failed!'. $response->getHTTPStatus . ' ' . $response->getRawBody());
   }
 }
+
 goto b;
 
 a:
+// Composerでインストールしたライブラリを一括読み込み
+require_once __DIR__ . '/vendor/autoload.php';
 // テーブル名を定義
 define('TABLE_NAME_STONES', 'stones');
 
@@ -839,6 +864,7 @@ class dbConnection {
     return self::$db;
   }
 }
+
 b:
 
 ?>
